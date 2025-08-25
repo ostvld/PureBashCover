@@ -39,25 +39,26 @@ BEGIN {
     print "</style>"
     print "</head>"
     print "<body>"
+    covered_count = 0
 }
 
 NR == FNR {
-    # Обрабатываем report.log
-    if ($0 ~ "^[0-9]+\t" script_basename ":[0-9]+$") {
-        split($2, parts, ":")
-        line = parts[2]
-        coverage[line] = $1
+    # Обрабатываем report.log - ИЗМЕНЕНО для формата: ++./scripts/filename:linenumber:command
+    # Ищем строки, которые содержат имя файла с любым путем перед ним
+    if (match($0, "^[+]+.*/" script_basename ":([0-9]+):", matches)) {
+        line = matches[1]
+        coverage[line] = 1
+        covered_count++
     }
     next
 }
 
 FNR == 1 {
-    covered_lines = length(coverage)
-    coverage_percent = (total_lines == 0) ? 100 : (covered_lines * 100) / total_lines
+    percent_covered = (total_lines == 0) ? 100 : (covered_count * 100) / total_lines
     printf "<h1>Отчет о покрытии кода для %s</h1>\n", script_basename
     printf "<p>Общее строк: %d</p>\n", total_lines
-    printf "<p>Покрыто строк: %d</p>\n", covered_lines
-    printf "<p>Процент покрытия: %.2f%%</p>\n", coverage_percent
+    printf "<p>Покрыто строк: %d</p>\n", covered_count
+    printf "<p>Процент покрытия: %.2f%%</p>\n", percent_covered
     print "<table>"
     print "<tr><th>Строка</th><th>Счетчик</th><th>Код</th></tr>"
 }
@@ -93,4 +94,3 @@ END {
 ' "$report_file" "$script_file" > coverage_report.html
 
 echo "Отчет создан: coverage_report.html"
-
